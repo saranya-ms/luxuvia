@@ -1,0 +1,90 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #0a0e1a;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #1e2d50;
+    border-radius: 4px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #f59218;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-gradient-to-br from-[#f59218] to-[#e88510] text-white px-6 py-3 rounded-sm font-body font-semibold text-sm transition-all duration-300 hover:shadow-lg hover:from-[#e88510] hover:to-[#d47a0e];
+  }
+
+  .accent-line {
+    @apply w-12 h-0.5 bg-gradient-to-r from-[#f59218] to-[#f5b862];
+  }
+
+  .glass-dark {
+    @apply bg-[rgba(10,14,26,0.88)] backdrop-blur-[20px];
+  }
+
+  .card-lift {
+    @apply transition-all duration-500;
+    transition-property: transform, border-color, box-shadow;
+    transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .card-lift:hover {
+    transform: translateY(-6px);
+    @apply border-[rgba(245,146,24,0.35)] shadow-[0_8px_32px_rgba(245,146,24,0.06)];
+  }
+
+  .hero-gradient {
+    @apply bg-gradient-to-br from-[rgba(180,160,140,0.6)] via-[rgba(120,110,120,0.5)] to-[#0a0e1a];
+  }
+
+  .font-heading {
+    font-family: 'Cormorant Garamond', serif;
+  }
+
+  .font-body {
+    font-family: 'Figtree', sans-serif;
+  }
+}
+
+/* Noise texture background */
+.noise {
+  position: relative;
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      rgba(0, 0, 0, 0.15),
+      rgba(0, 0, 0, 0.15) 1px,
+      transparent 1px,
+      transparent 2px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      rgba(0, 0, 0, 0.15),
+      rgba(0, 0, 0, 0.15) 1px,
+      transparent 1px,
+      transparent 2px
+    );
+}
+
+/* Smooth scroll */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Utility classes */
+.text-gradient {
+  background: linear-gradient(135deg, #f59218 0%, #f5b862 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
