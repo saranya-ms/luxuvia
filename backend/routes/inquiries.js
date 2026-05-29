@@ -1,48 +1,24 @@
 const express = require('express');
-const fs = require('fs').promises;
-const path = require('path');
+const supabase = require('../utils/supabaseClient');
 const auth = require('../middleware/auth');
 
 const router = express.Router();
-const inquiriesFile = path.join(__dirname, '..', 'data', 'inquiries.json');
-
-const ensureInquiriesFile = async () => {
-  try {
-    await fs.access(inquiriesFile);
-  } catch (error) {
-    await fs.mkdir(path.dirname(inquiriesFile), { recursive: true });
-    await fs.writeFile(inquiriesFile, '[]', 'utf8');
-  }
-};
-
-const readInquiries = async () => {
-  await ensureInquiriesFile();
-  const raw = await fs.readFile(inquiriesFile, 'utf8');
-  return JSON.parse(raw || '[]');
-};
-
-const writeInquiries = async (inquiries) => {
-  await ensureInquiriesFile();
-  await fs.writeFile(inquiriesFile, JSON.stringify(inquiries, null, 2), 'utf8');
-};
-
-const createInquiryId = () => `${Date.now()}-${Math.floor(Math.random() * 100000)}`;
 
 // POST create inquiry (public)
 router.post('/', async (req, res) => {
   try {
-    const inquiries = await readInquiries();
-    const newInquiry = {
-      _id: createInquiryId(),
-      status: 'new',
-      createdAt: new Date().toISOString(),
+    const inquiry = {
       ...req.body,
+      status: 'new',
+      created_at: new Date().toISOString(),
     };
 
-    inquiries.unshift(newInquiry);
-    await writeInquiries(inquiries);
+    const { data, error } = await supabase.from('inquiries').insert(inquiry).single();
+    if (error) {
+      return res.status(400).json({ message: error.message });
+    }
 
-    res.status(201).json(newInquiry);
+    res.status(201).json(data);
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
@@ -51,9 +27,16 @@ router.post('/', async (req, res) => {
 // GET all inquiries (admin only)
 router.get('/', auth, async (req, res) => {
   try {
-    const inquiries = await readInquiries();
-    inquiries.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-    res.json(inquiries);
+    const { data, error } = await supabase
+      .from('inquiries')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      return res.status(500).json({ message: error.message });
+    }
+
+    res.json(data || []);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -63,17 +46,20 @@ router.get('/', auth, async (req, res) => {
 router.put('/:id/status', auth, async (req, res) => {
   try {
     const { status } = req.body;
-    const inquiries = await readInquiries();
-    const index = inquiries.findIndex((inquiry) => inquiry._id === req.params.id);
+    const { data, error } = await supabase
+      .from('inquiries')
+      .update({ status })
+      .eq('id', req.params.id)
+      .single();
 
-    if (index === -1) {
-      return res.status(404).json({ message: 'Inquiry not found' });
+    if (error) {
+      if (error.message?.includes('No rows found')) {
+        return res.status(404).json({ message: 'Inquiry not found' });
+      }
+      return res.status(400).json({ message: error.message });
     }
 
-    inquiries[index].status = status;
-    await writeInquiries(inquiries);
-
-    res.json(inquiries[index]);
+    res.json(data);
   } catch (error) {
     res.status(400).json({ message: error.message });
   }

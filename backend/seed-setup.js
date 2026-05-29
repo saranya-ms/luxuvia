@@ -1,5 +1,15 @@
-require('dotenv').config();
-const supabase = require('./utils/supabaseClient');
+require('dotenv').config({ path: require('path').join(__dirname, '.env') });
+const { createClient } = require('@supabase/supabase-js');
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+
+if (!supabaseUrl || !supabaseKey) {
+  console.error('❌ Missing Supabase environment variables');
+  process.exit(1);
+}
+
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 const seedProjects = [
   {
@@ -122,7 +132,6 @@ const seedProjects = [
       { num: 7, bhk: '3 BHK', facing: 'EAST & WEST', area: 1530, beds: 3, baths: 3, thumbnail: 'https://images.pexels.com/photos/280229/pexels-photo-280229.jpeg?auto=compress&cs=tinysrgb&w=1200' },
       { num: 8, bhk: '3 BHK', facing: 'NORTH', area: 1535, beds: 3, baths: 3, thumbnail: 'https://images.pexels.com/photos/2698509/pexels-photo-2698509.jpeg?auto=compress&cs=tinysrgb&w=1200' },
     ],
-    created_at: new Date().toISOString(),
   },
   {
     name: 'Luxuvia Padmavati Residency',
@@ -163,7 +172,6 @@ const seedProjects = [
       { name: 'Ramappa Seed Park', type: 'Park', distance: '7 mins' },
     ],
     apartments: [],
-    created_at: new Date().toISOString(),
   },
   {
     name: 'Luxuvia Venkataramana Residency',
@@ -204,31 +212,70 @@ const seedProjects = [
       { name: 'Pocharam Lake', type: 'Nature', distance: '1 km' },
     ],
     apartments: [],
-    created_at: new Date().toISOString(),
   },
 ];
 
 const seed = async () => {
   try {
-    console.log('Seeding Supabase projects...');
+    console.log('\n🌱 Starting Supabase seed process...\n');
 
+    // Verify connection
+    console.log('📡 Verifying Supabase connection...');
+    const { data: connectionTest, error: connError } = await supabase
+      .from('projects')
+      .select('count')
+      .limit(1);
+
+    if (connError) {
+      console.error('❌ Connection failed:', connError.message);
+      console.error('\n⚠️  IMPORTANT: Please ensure the "projects" table exists with proper columns.');
+      console.error('   Run this SQL in your Supabase SQL Editor:\n');
+      const fs = require('fs');
+      const path = require('path');
+      const sqlPath = path.join(__dirname, 'migrations', 'create_projects_table.sql');
+      if (fs.existsSync(sqlPath)) {
+        const sqlContent = fs.readFileSync(sqlPath, 'utf8');
+        console.log(sqlContent);
+      }
+      process.exit(1);
+    }
+
+    console.log('✓ Connection verified!\n');
+
+    // Clear existing data (optional)
+    console.log('🗑️  Clearing existing projects...');
+    const { error: deleteError } = await supabase.from('projects').delete().neq('id', -1);
+    if (deleteError && !deleteError.message.includes('No rows')) {
+      console.warn('⚠️  Warning clearing projects:', deleteError.message);
+    } else {
+      console.log('✓ Cleared existing projects\n');
+    }
+
+    // Seed new data
+    console.log('📝 Seeding project data...');
     const { data, error } = await supabase
       .from('projects')
-      .upsert(seedProjects, { onConflict: 'slug' })
-      .select('*');
+      .insert(seedProjects)
+      .select('id, slug, name');
 
     if (error) {
       throw error;
     }
 
-    console.log(`? Seeded ${data.length} projects to Supabase`);
-    data.forEach((project) => {
-      console.log(`  - ${project.name} (${project.slug})`);
+    console.log(`\n✅ Successfully seeded ${data.length} projects:\n`);
+    data.forEach((project, idx) => {
+      console.log(`  ${idx + 1}. ${project.name}`);
+      console.log(`     Slug: ${project.slug}`);
+      console.log(`     ID: ${project.id}\n`);
     });
+
+    console.log('🎉 Seeding complete!\n');
   } catch (error) {
-    console.error('? Supabase seed error:', error.message || error);
+    console.error('\n❌ Seed error:', error.message || error);
+    console.error('\nStack:', error);
     process.exit(1);
   }
 };
 
+// Run the seed
 seed();

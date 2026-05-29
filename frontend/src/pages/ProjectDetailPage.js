@@ -220,7 +220,7 @@ export default function ProjectDetailPage() {
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <Tabs defaultValue="overview">
           <TabsList className="bg-[#0f1628] border border-[#1e2d50] p-1 w-full flex flex-wrap justify-start gap-0 h-auto rounded-md mb-10">
-            {['Overview', 'Apartments', 'Floor Plans', 'Amenities', 'Specifications', 'Location', 'Contact'].map((tab) => {
+            {['Overview', 'Floor Plans', 'Amenities', 'Specifications', 'Location', 'Contact'].map((tab) => {
               const value = tab.toLowerCase().replace(/\s+/g, '-');
               return (
                 <TabsTrigger
@@ -319,9 +319,9 @@ export default function ProjectDetailPage() {
             </div>
           </TabsContent>
 
-          <TabsContent value="apartments">
+          <TabsContent value="floor-plans">
             <div>
-              <h2 className="font-heading text-2xl text-white mb-3">Browse Apartments</h2>
+              <h2 className="font-heading text-2xl text-white mb-3">Browse Plans</h2>
               <div className="accent-line mb-6" />
               {project.apartments?.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -354,10 +354,6 @@ export default function ProjectDetailPage() {
                           <span className="flex items-center gap-1"><BadgeCheck className="w-4 h-4" /> {apt.baths}</span>
                           <span className="flex items-center gap-1"><Maximize className="w-4 h-4" /> {apt.area}</span>
                         </div>
-                        <div className="mt-3 flex items-center gap-2 text-[#f59218] text-[11px] font-body uppercase tracking-wider">
-                          <span>View Details</span>
-                          <ChevronRight className="w-3.5 h-3.5" />
-                        </div>
                       </div>
                     </Link>
                   ))}
@@ -367,40 +363,6 @@ export default function ProjectDetailPage() {
                   Apartment details coming soon for this project.
                 </p>
               )}
-            </div>
-          </TabsContent>
-
-          <TabsContent value="floor-plans">
-            <div>
-              <h2 className="font-heading text-2xl text-white mb-3">Floor Plans</h2>
-              <p className="font-body text-sm text-[#6b7fa0] mb-6">
-                Select a floor plan & explore every room in 3D/360
-              </p>
-              <div className="accent-line mb-8" />
-              {project.floor_plans?.map((plan, idx) => (
-                <Reveal key={plan.group} delay={idx * 100} className="mb-8">
-                  <div className="bg-[#0f1628] border border-[#1e2d50] p-6 rounded-md">
-                    <h3 className="font-heading text-xl text-[#f59218] mb-1">
-                      {plan.group} � {plan.range}
-                    </h3>
-                    {plan.image && (
-                      <img
-                        src={plan.image}
-                        alt={plan.group}
-                        className="w-full max-w-lg mt-4 mb-4 rounded-md border border-[#1e2d50]"
-                      />
-                    )}
-                    <div className="space-y-2 mt-4">
-                      {plan.variants?.map((variant, variantIdx) => (
-                        <div key={variantIdx} className="flex items-center justify-between bg-[#0a0e1a] border border-[#1e2d50] p-3 rounded-sm">
-                          <span className="font-body text-sm text-[#8090b0]">{variant.desc}</span>
-                          <span className="font-body text-xs text-[#4a5a7a]">{variant.units} unit(s)</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </Reveal>
-              ))}
             </div>
           </TabsContent>
 
