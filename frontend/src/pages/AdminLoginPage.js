@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import API from '../utils/api';
+import { supabase } from '../utils/api';
 import { toast } from 'sonner';
 
 const LOGO = 'https://customer-assets.emergentagent.com/job_luxuvia-dev/artifacts/gjc6gs38_luxuvia%20icon.png';
 
 export default function AdminLoginPage() {
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -16,8 +16,13 @@ export default function AdminLoginPage() {
     setLoading(true);
 
     try {
-      const res = await API.post('/admin/login', { username, password });
-      localStorage.setItem('admin_token', res.data.token);
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) throw error;
+
       toast.success('Logged in successfully!');
       navigate('/admin/dashboard');
     } catch (error) {
@@ -39,15 +44,15 @@ export default function AdminLoginPage() {
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Username */}
+          {/* Email */}
           <div>
-            <label className="block font-body text-sm text-[#8090b0] mb-2">Username</label>
+            <label className="block font-body text-sm text-[#8090b0] mb-2">Email</label>
             <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               required
-              placeholder="Enter username"
+              placeholder="Enter email"
               className="w-full bg-[#0a0e1a]/50 border-b-2 border-[#1e2d50] focus:border-[#f59218] px-1 py-3 outline-none transition-colors placeholder:text-[#3a4a6a] text-white font-body text-sm"
             />
           </div>

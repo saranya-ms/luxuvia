@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import API from '../utils/api';
 import { CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -29,12 +28,30 @@ export default function InquiryForm({
     setLoading(true);
 
     try {
-      await API.post('/api/inquiries', {
-        ...formData,
+      const payload = {
+        full_name: formData.name,
+        phone: formData.phone,
+        email: formData.email,
+        message: formData.message,
         project_slug: projectSlug,
         project_name: projectName,
         inquiry_type: inquiryType,
-      });
+      };
+
+      const res = await fetch(
+        "https://jnbjqxvkqqsccurwrclu.supabase.co/functions/v1/resend-email-luxuvia",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        }
+      );
+
+      const result = await res.json();
+
+      if (!result.success) {
+        throw new Error(result.error || "Unknown error");
+      }
 
       setSubmitted(true);
       setFormData({ name: '', phone: '', email: '', message: '' });

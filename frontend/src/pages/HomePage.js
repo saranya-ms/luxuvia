@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, Building2, Handshake, MapPin, Users, Award } from 'lucide-react';
-import API from '../utils/api';
+import { supabase } from '../utils/api';
 import Reveal from '../components/Reveal';
 import ProjectCard from '../components/ProjectCard';
 import InquiryForm from '../components/InquiryForm';
@@ -13,12 +13,11 @@ export default function HomePage() {
   useEffect(() => {
     const fetchProjects = async () => {
       try {
-        const res = await API.get('/projects');
-        const data = res.data;
-        setProjects(data);
+        const { data, error } = await supabase.from('projects').select('*');
+        if (error) throw error;
+        setProjects(data || []);
 
-        // Find featured project
-        const featured = data.find(
+        const featured = (data || []).find(
           (p) => p.slug === 'sri-laxmi-janardhana-nilayam'
         );
         setFeaturedProject(featured);
@@ -217,7 +216,7 @@ export default function HomePage() {
           {/* Projects Grid */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {projects.slice(0, 3).map((project) => (
-              <ProjectCard key={project._id} project={project} />
+              <ProjectCard key={project.slug || project.id} project={project} />
             ))}
           </div>
         </div>

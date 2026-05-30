@@ -27,9 +27,8 @@ import {
   ArrowUpDown,
   BatteryCharging,
   CloudDrizzle,
-  ChevronRight,
 } from 'lucide-react';
-import API from '../utils/api';
+import { supabase } from '../utils/api';
 import InquiryForm from '../components/InquiryForm';
 import Reveal from '../components/Reveal';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
@@ -58,6 +57,34 @@ const iconMap = {
   Trees: Leaf,
 };
 
+const parseJsonOrArray = (value) => {
+  if (Array.isArray(value)) return value;
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed : [value];
+    } catch {
+      return [value];
+    }
+  }
+  return [];
+};
+
+const normalizeProjectRow = (projectRow) => ({
+  ...projectRow,
+  highlights: parseJsonOrArray(projectRow.highlights),
+  building_images: parseJsonOrArray(projectRow.building_images),
+  images: parseJsonOrArray(projectRow.images),
+  apartments: parseJsonOrArray(projectRow.apartments),
+  amenities: parseJsonOrArray(projectRow.amenities),
+  specifications: parseJsonOrArray(projectRow.specifications),
+  nearby_places: parseJsonOrArray(projectRow.nearby_places),
+  status:
+    typeof projectRow.status === 'string'
+      ? projectRow.status.trim().toLowerCase().replace(/\s+/g, '_')
+      : projectRow.status,
+});
+
 const fallbackImage =
   'https://images.pexels.com/photos/18435276/pexels-photo-18435276.jpeg?auto=compress&cs=tinysrgb&w=1600';
 
@@ -66,15 +93,45 @@ export default function ProjectDetailPage() {
   const [project, setProject] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [selectedApartment, setSelectedApartment] = useState(null);
 
   useEffect(() => {
+    const fetchBy = async (col) => {
+      const res = await supabase.from('projects').select('*').eq(col, slug).maybeSingle();
+      return res;
+    };
+
     const fetchProject = async () => {
+      if (!slug) {
+        setError('Unable to load project details.');
+        setLoading(false);
+        return;
+      }
+
       try {
-        const res = await API.get(`/projects/${slug}`);
-        setProject(res.data);
+        // Try common column names in case the Supabase table uses a different slug field
+        const attempts = ['slug', 'project_slug', 'id'];
+        let result = null;
+        for (const col of attempts) {
+          const { data, error } = await fetchBy(col);
+          console.debug(`Supabase query by ${col}:`, { data, error });
+          if (error) {
+            // continue trying other columns if not found
+            continue;
+          }
+          if (data) {
+            result = data;
+            break;
+          }
+        }
+
+        if (!result) {
+          setError('Project not found.');
+          return;
+        }
+
+        setProject(normalizeProjectRow(result));
       } catch (fetchError) {
-        console.error('Error fetching project:', fetchError);
+        console.error('Error fetching project (multi-attempt):', fetchError);
         setError('Unable to load project details.');
       } finally {
         setLoading(false);
@@ -84,11 +141,33 @@ export default function ProjectDetailPage() {
     fetchProject();
   }, [slug]);
 
+  // Diagnostic: raw REST fetch to Supabase to surface HTTP status/body for debugging
   useEffect(() => {
-    if (project?.apartments?.length) {
-      setSelectedApartment(project.apartments[0]);
-    }
-  }, [project]);
+    const rawCheck = async () => {
+      const url = process.env.REACT_APP_SUPABASE_URL;
+      const key = process.env.REACT_APP_SUPABASE_ANON_KEY || process.env.REACT_APP_SUPABASE_PUBLISHABLE_KEY;
+      if (!url || !key || !slug) return;
+
+      try {
+        const endpoint = `${url.replace(/\/+$/, '')}/rest/v1/projects?slug=eq.${encodeURIComponent(slug)}`;
+        const res = await fetch(endpoint, {
+          headers: {
+            apikey: key,
+            Authorization: `Bearer ${key}`,
+            Accept: 'application/json',
+          },
+        });
+        const text = await res.text();
+        // eslint-disable-next-line no-console
+        console.info('Supabase REST check', { endpoint, status: res.status, body: text });
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error('Supabase REST check failed', err);
+      }
+    };
+
+    rawCheck();
+  }, [slug]);
 
   const heroImage = useMemo(() => {
     if (!project) return fallbackImage;
@@ -326,11 +405,9 @@ export default function ProjectDetailPage() {
               {project.apartments?.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                   {project.apartments.map((apt) => (
-                    <Link
+                    <div
                       key={apt.num}
-                      to={`/projects/${slug}/apartment/${apt.num}`}
-                      data-testid={`apt-card-${apt.num}`}
-                      className="card-lift bg-[#0f1628] border border-[#1e2d50] overflow-hidden group block rounded-md"
+                      className="card-lift bg-[#0f1628] border border-[#1e2d50] overflow-hidden rounded-md"
                     >
                       <div className="relative h-40 overflow-hidden">
                         <img
@@ -343,11 +420,11 @@ export default function ProjectDetailPage() {
                         </span>
                       </div>
                       <div className="p-4">
-                        <h4 className="font-heading text-lg text-white group-hover:text-[#f59218] mb-1">
+                        <h4 className="font-heading text-lg text-white mb-1">
                           Apartment {apt.num}
                         </h4>
                         <p className="font-body text-xs text-[#6b7fa0] mb-2.5">
-                          {apt.facing} � {apt.area} SFT
+                          {apt.facing} · {apt.area} SFT
                         </p>
                         <div className="flex items-center gap-4 text-[#4a5a7a] font-body text-[11px]">
                           <span className="flex items-center gap-1"><BedDouble className="w-4 h-4" /> {apt.beds}</span>
@@ -355,7 +432,7 @@ export default function ProjectDetailPage() {
                           <span className="flex items-center gap-1"><Maximize className="w-4 h-4" /> {apt.area}</span>
                         </div>
                       </div>
-                    </Link>
+                    </div>
                   ))}
                 </div>
               ) : (

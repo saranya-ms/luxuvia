@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LogOut, ExternalLink, Trash2 } from 'lucide-react';
 import * as Tabs from '@radix-ui/react-tabs';
-import API from '../utils/api';
+import { supabase } from '../utils/api';
 import { toast } from 'sonner';
 import Reveal from '../components/Reveal';
 
@@ -23,23 +23,33 @@ export default function AdminDashboardPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem('admin_token');
-    if (!token) {
-      navigate('/admin/login');
-      return;
-    }
+    const initialize = async () => {
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !sessionData?.session) {
+        navigate('/admin/login');
+        return;
+      }
 
-    const fetchData = async () => {
       try {
-        const [statsRes, inquiriesRes, projectsRes] = await Promise.all([
-          API.get('/stats'),
-          API.get('/inquiries'),
-          API.get('/projects'),
+        const [projectsRes, inquiriesRes] = await Promise.all([
+          supabase.from('projects').select('*').order('created_at', { ascending: false }),
+          supabase.from('inquiries').select('*').order('created_at', { ascending: false }),
         ]);
 
-        setStats(statsRes.data);
-        setInquiries(inquiriesRes.data);
-        setProjects(projectsRes.data);
+        if (projectsRes.error) throw projectsRes.error;
+        if (inquiriesRes.error) throw inquiriesRes.error;
+
+        const projectData = projectsRes.data || [];
+        const inquiryData = inquiriesRes.data || [];
+
+        setProjects(projectData);
+        setInquiries(inquiryData);
+        setStats({
+          total_projects: projectData.length,
+          total_inquiries: inquiryData.length,
+          new_inquiries: inquiryData.filter((item) => item.status === 'new').length,
+          completed_projects: projectData.filter((item) => item.status === 'completed').length,
+        });
       } catch (error) {
         toast.error('Failed to load admin data');
         console.error(error);
@@ -48,21 +58,29 @@ export default function AdminDashboardPage() {
       }
     };
 
-    fetchData();
+    initialize();
   }, [navigate]);
 
-  const handleLogout = () => {
-    localStorage.removeItem('admin_token');
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     navigate('/admin/login');
     toast.success('Logged out successfully');
   };
 
   const handleStatusUpdate = async (inquiryId, newStatus) => {
     try {
-      await API.put(`/inquiries/${inquiryId}/status`, { status: newStatus });
+      const { error } = await supabase
+        .from('inquiries')
+        .update({ status: newStatus })
+        .eq('id', inquiryId);
+
+      if (error) throw error;
+
       setInquiries((prev) =>
         prev.map((inq) =>
-          inq._id === inquiryId ? { ...inq, status: newStatus } : inq
+          (inq.id === inquiryId || inq._id === inquiryId)
+            ? { ...inq, status: newStatus }
+            : inq
         )
       );
       toast.success('Status updated');
@@ -75,18 +93,16 @@ export default function AdminDashboardPage() {
     if (!window.confirm('Are you sure you want to delete this project?')) return;
 
     try {
-      await API.delete(`/projects/${projectId}`);
-      setProjects((prev) => prev.filter((p) => p._id !== projectId));
+      const { error } = await supabase.from('projects').delete().eq('id', projectId);
+      if (error) throw error;
+      setProjects((prev) => prev.filter((p) => p.id !== projectId && p._id !== projectId));
       toast.success('Project deleted');
     } catch (error) {
       toast.error('Failed to delete project');
     }
   };
 
-  if (!localStorage.getItem('admin_token')) {
-    return null;
-  }
-
+  // Rely on Supabase session state instead of localStorage admin token.
   if (loading) {
     return (
       <div className="bg-dark-base text-text-white min-h-screen flex items-center justify-center">
