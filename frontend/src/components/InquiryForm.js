@@ -37,7 +37,7 @@ export default function InquiryForm({
         project_name: projectName,
         inquiry_type: inquiryType,
       };
-
+      
       const res = await fetch(
         "https://jnbjqxvkqqsccurwrclu.supabase.co/functions/v1/resend-email-luxuvia",
         {

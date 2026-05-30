@@ -1,5 +1,5 @@
 export const config = {
-  runtime: "edge",
+  runtime: "deno",
   verifyJWT: false,
 };
 
@@ -7,7 +7,7 @@ import { serve } from "https://deno.land/std/http/server.ts";
 import { Resend } from "https://esm.sh/resend@2.0.0";
 
 serve(async (req) => {
-  // CORS preflight
+
   if (req.method === "OPTIONS") {
     return new Response("ok", {
       status: 200,
@@ -25,7 +25,7 @@ serve(async (req) => {
     const resend = new Resend(Deno.env.get("RESEND_API_KEY")!);
 
     await resend.emails.send({
-      from: "Luxuvia <info@luxuvia.in>",
+      from: "Luxuvia's Contact Form <notifications@luxuvia.in>",
       to: "support@luxuvia.in",
       subject: "New Inquiry Received",
       html: `
@@ -34,21 +34,19 @@ serve(async (req) => {
         <p><strong>Phone:</strong> ${body.phone}</p>
         <p><strong>Email:</strong> ${body.email}</p>
         <p><strong>Message:</strong> ${body.message}</p>
+        <p><strong>Inquiry Type:</strong> ${body.inquiry_type}</p>
       `,
     });
 
     return new Response(JSON.stringify({ success: true }), {
       status: 200,
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-      },
+      headers: { "Access-Control-Allow-Origin": "*" },
     });
   } catch (err) {
+    console.error("EMAIL ERROR:", err);
     return new Response(JSON.stringify({ error: err.message }), {
       status: 400,
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-      },
+      headers: { "Access-Control-Allow-Origin": "*" },
     });
   }
 });
