@@ -44,7 +44,7 @@ export default function Navbar() {
                 className={`font-body text-[13px] uppercase tracking-[0.22em] transition-colors ${
                   pathname === path
                     ? 'text-[#f59218]'
-                    : 'text-[#8090b0] hover:text-[#eef1f6]'
+                    : 'text-white hover:text-[#f59218]'
                 }`}
               >
                 {label}
@@ -92,7 +92,7 @@ export default function Navbar() {
                   className={`font-body text-[13px] uppercase tracking-[0.22em] transition-colors ${
                     pathname === path
                       ? 'text-[#f59218]'
-                      : 'text-[#8090b0] hover:text-[#eef1f6]'
+                      : 'text-white hover:text-[#f59218]'
                   }`}
                 >
                   {label}

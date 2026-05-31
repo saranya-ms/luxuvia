@@ -93,6 +93,7 @@ export default function ProjectDetailPage() {
   const [project, setProject] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [zoomImage, setZoomImage] = useState(null);
 
   useEffect(() => {
     const fetchBy = async (col) => {
@@ -409,12 +410,18 @@ export default function ProjectDetailPage() {
                       key={apt.num}
                       className="card-lift bg-[#0f1628] border border-[#1e2d50] overflow-hidden rounded-md"
                     >
-                      <div className="relative h-40 overflow-hidden">
+                      <div
+                        className="relative h-40 overflow-hidden cursor-pointer"
+                        onClick={() => setZoomImage(apt.thumbnail)}
+                      >
                         <img
                           src={apt.thumbnail}
                           alt={`Apartment ${apt.num}`}
-                          className="card-img w-full h-full object-cover transition-transform duration-500"
+                          className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
                         />
+                        <span className="absolute bottom-2 right-2 bg-black/50 text-white text-[10px] px-2 py-1 rounded">
+                          Click to Zoom
+                        </span>
                         <span className="absolute top-2 left-2 rounded-sm bg-[#f59218] px-2 py-1 text-[10px] font-body font-bold text-white">
                           {apt.bhk}
                         </span>
@@ -568,6 +575,18 @@ export default function ProjectDetailPage() {
           </TabsContent>
         </Tabs>
       </section>
+      {zoomImage && (
+        <div
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50"
+          onClick={() => setZoomImage(null)}
+        >
+          <img
+            src={zoomImage}
+            alt="Zoomed floor plan"
+            className="max-w-[90%] max-h-[90%] rounded-lg shadow-2xl"
+          />
+        </div>
+      )}
     </main>
   );
 }
